@@ -2,6 +2,8 @@
 
 -behavior(gen_server).
 
+-compile(export_all).
+
 -export([
          start_link/2,
          stop/0,
@@ -46,10 +48,14 @@ delete_children(Parent) ->
 %% gen_server implementation
 
 init([ZooKeeperServers, FrameworkID]) ->
-    {ok, ConnPid} = erlzk:connect(ZooKeeperServers, 30000),
     Namespace = string:join([?BASE_NS, FrameworkID], "/"),
+
+    {ok, Conn} = erlzk:connect(ZooKeeperServers, 30000),
+    erlzk:create(Conn, "/"), %% Just in case it doesn't already exist
+    create(Conn, Namespace),
+
     {ok, #state{
-            conn = ConnPid,
+            conn = Conn,
             namespace = Namespace
            }}.
 
@@ -82,8 +88,21 @@ code_change(_OldVersion, State, _Extra) ->
 
 %% Private implementation functions:
 
-get_node(_Conn, _Root) ->
-    {error, unimplemented}.
+create(Conn, Node) ->
+    Components = string:tokens(Node, "/"),
+    lists:foldl(fun(C, Acc) ->
+                        NewNode = Acc ++ C,
+                        erlzk:create(Conn, NewNode),
+                        NewNode ++ "/"
+                end, "/", Components).
+
+get_node(Conn, Node) ->
+    case erlzk:get_data(Conn, Node) of
+        {ok, {Data, _Stat}} ->
+            {ok, Node, Data};
+        Error ->
+            Error
+    end.
 
 %% Wrapper for running the eunit tests which are contained in a separate module:
 
