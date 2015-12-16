@@ -14,10 +14,21 @@ run(Server) ->
              SetupFun,
              TeardownFun,
              [
-              fun dummy/0
+              fun create_delete/0
              ]},
 
     eunit:test(Tests).
 
-dummy() ->
+-define(CHILD_NODE, <<"child">>).
+
+create_delete() ->
+    {ok, RootName, _Data = <<>>} = mesos_metadata_manager:get_root_node(),
+    ?assertEqual({error, notfound}, mesos_metadata_manager:get_node(?CHILD_NODE)),
+
+    {ok, ChildNode, _Data = <<>>} = mesos_metadata_manager:make_empty_child(RootName, ?CHILD_NODE),
+    ?assertEqual({ok, ChildNode, <<>>}, mesos_metadata_manager:get_node(?CHILD_NODE)),
+
+    ok = mesos_metadata_manager:delete_children(RootName),
+    ?assertEqual({error, notfound}, mesos_metadata_manager:get_node(?CHILD_NODE)),
+
     pass.

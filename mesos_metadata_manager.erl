@@ -4,7 +4,11 @@
 
 -export([
          start_link/2,
-         stop/0
+         stop/0,
+         get_root_node/0,
+         get_node/1,
+         make_empty_child/2,
+         delete_children/1
         ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -13,7 +17,7 @@
 
 -record(state, {
           conn,
-          framework_id
+          namespace
          }).
 
 -define(BASE_NS, "/riak/frameworks").
@@ -27,15 +31,38 @@ start_link(ZooKeeperServers, FrameworkID) ->
 stop() ->
     gen_server:call(?MODULE, stop).
 
+get_root_node() ->
+    gen_server:call(?MODULE, get_root_node).
+
+get_node(Node) ->
+    gen_server:call(?MODULE, {get_node, Node}).
+
+make_empty_child(Parent, Child) ->
+    gen_server:call(?MODULE, {make_empty_child, Parent, Child}).
+
+delete_children(Parent) ->
+    gen_server:call(?MODULE, {delete_children, Parent}).
+
 %% gen_server implementation
 
 init([ZooKeeperServers, FrameworkID]) ->
     {ok, ConnPid} = erlzk:connect(ZooKeeperServers, 30000),
+    Namespace = string:join([?BASE_NS, FrameworkID], "/"),
     {ok, #state{
             conn = ConnPid,
-            framework_id = FrameworkID
+            namespace = Namespace
            }}.
 
+handle_call(get_root_node, _From, State) ->
+    #state{conn = Conn, namespace = Root} = State,
+    {reply, get_node(Conn, Root), State};
+handle_call({get_node, Node}, _From, State) ->
+    Conn = State#state.conn,
+    {reply, get_node(Conn, Node), State};
+handle_call({make_empty_child, _Parent, _Child}, _From, State) ->
+    {reply, unimplemented, State};
+handle_call({delete_children, _Parent}, _From, State) ->
+    {reply, unimplemented, State};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call(_Msg, _From, State) ->
@@ -52,6 +79,11 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVersion, State, _Extra) ->
     {ok, State}.
+
+%% Private implementation functions:
+
+get_node(_Conn, _Root) ->
+    {error, unimplemented}.
 
 %% Wrapper for running the eunit tests which are contained in a separate module:
 
