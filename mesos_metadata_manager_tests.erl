@@ -6,9 +6,10 @@
 
 run(Server) ->
     SetupFun = fun() ->
+                       (catch mesos_metadata_manager:stop()),
                        {ok, _Pid} = mesos_metadata_manager:start_link(Server, "md-mgr-test")
                end,
-    TeardownFun = fun(_) -> mesos_metadata_manager:stop() end,
+    TeardownFun = fun(_) -> ok end,
 
     Tests = {setup,
              SetupFun,
@@ -19,16 +20,18 @@ run(Server) ->
 
     eunit:test(Tests).
 
--define(CHILD_NODE, "child").
-
 create_delete() ->
     {ok, RootName, _Data = <<>>} = mesos_metadata_manager:get_root_node(),
-    ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(?CHILD_NODE)),
+    ChildName = RootName ++ "/child",
 
-    {ok, ChildNode, _Data = <<>>} = mesos_metadata_manager:make_empty_child(RootName, ?CHILD_NODE),
-    ?assertEqual({ok, ChildNode, <<>>}, mesos_metadata_manager:get_node(?CHILD_NODE)),
+    mesos_metadata_manager:recursive_delete(ChildName),
+    ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(ChildName)),
+
+    ?assertEqual({ok, ChildName, _Data = <<>>},
+                 mesos_metadata_manager:make_empty_child(RootName, "child")),
+    ?assertEqual({ok, ChildName, <<>>}, mesos_metadata_manager:get_node(ChildName)),
 
     ok = mesos_metadata_manager:delete_children(RootName),
-    ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(?CHILD_NODE)),
+    ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(ChildName)),
 
     pass.

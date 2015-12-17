@@ -10,7 +10,8 @@
          get_root_node/0,
          get_node/1,
          make_empty_child/2,
-         delete_children/1
+         delete_children/1,
+         recursive_delete/1
         ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -45,6 +46,9 @@ make_empty_child(Parent, Child) ->
 delete_children(Parent) ->
     gen_server:call(?MODULE, {delete_children, Parent}).
 
+recursive_delete(Node) ->
+    gen_server:call(?MODULE, {recursive_delete, Node}).
+
 %% gen_server implementation
 
 init([ZooKeeperServers, FrameworkID]) ->
@@ -52,7 +56,7 @@ init([ZooKeeperServers, FrameworkID]) ->
 
     {ok, Conn} = erlzk:connect(ZooKeeperServers, 30000),
     erlzk:create(Conn, "/"), %% Just in case it doesn't already exist
-    create(Conn, Namespace),
+    guarantee_created(Conn, Namespace),
 
     {ok, #state{
             conn = Conn,
@@ -65,10 +69,16 @@ handle_call(get_root_node, _From, State) ->
 handle_call({get_node, Node}, _From, State) ->
     Conn = State#state.conn,
     {reply, get_node(Conn, Node), State};
-handle_call({make_empty_child, _Parent, _Child}, _From, State) ->
-    {reply, unimplemented, State};
-handle_call({delete_children, _Parent}, _From, State) ->
-    {reply, unimplemented, State};
+handle_call({make_empty_child, Parent, Child}, _From, State) ->
+    Conn = State#state.conn,
+    Node = string:join([Parent, Child], "/"),
+    {reply, create(Conn, Node), State};
+handle_call({delete_children, Parent}, _From, State) ->
+    Conn = State#state.conn,
+    {reply, delete_children(Conn, Parent), State};
+handle_call({recursive_delete, Node}, _From, State) ->
+    Conn = State#state.conn,
+    {reply, recursive_delete(Conn, Node), State};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call(_Msg, _From, State) ->
@@ -89,6 +99,14 @@ code_change(_OldVersion, State, _Extra) ->
 %% Private implementation functions:
 
 create(Conn, Node) ->
+    case erlzk:create(Conn, Node) of
+        {ok, _} ->
+            {ok, Node, <<>>};
+        Error ->
+            Error
+    end.
+
+guarantee_created(Conn, Node) ->
     Components = string:tokens(Node, "/"),
     lists:foldl(fun(C, Acc) ->
                         NewNode = Acc ++ C,
@@ -102,6 +120,24 @@ get_node(Conn, Node) ->
             {ok, Node, Data};
         Error ->
             Error
+    end.
+
+delete_children(Conn, Parent) ->
+    case erlzk:get_children(Conn, Parent) of
+        {ok, Children} ->
+            lists:foreach(fun(C) -> erlzk:delete(Conn, [Parent, "/", C]) end, Children),
+            ok;
+        Error ->
+            Error
+    end.
+
+recursive_delete(Conn, Node) ->
+    case erlzk:get_children(Conn, Node) of
+        {ok, Children} ->
+            [recursive_delete(Conn, [Node, "/", C]) || C <- Children],
+            erlzk:delete(Conn, Node);
+        {error, no_node} ->
+            ok
     end.
 
 %% Wrapper for running the eunit tests which are contained in a separate module:
