@@ -2,23 +2,22 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
--export([run/1]).
+-define(TEST_ZK_SERVER, [{"localhost", 2181}]).
 
-run(Server) ->
+md_test_() ->
     SetupFun = fun() ->
+                       application:ensure_all_started(erlzk),
                        (catch mesos_metadata_manager:stop()),
-                       {ok, _Pid} = mesos_metadata_manager:start_link(Server, "md-mgr-test")
+                       {ok, _Pid} = mesos_metadata_manager:start_link(?TEST_ZK_SERVER,"md-mgr-test")
                end,
     TeardownFun = fun(_) -> ok end,
 
-    Tests = {setup,
-             SetupFun,
-             TeardownFun,
-             [
-              fun create_delete/0
-             ]},
-
-    eunit:test(Tests).
+    {setup,
+     SetupFun,
+     TeardownFun,
+     [
+      fun create_delete/0
+     ]}.
 
 create_delete() ->
     {ok, RootName, _Data = <<>>} = mesos_metadata_manager:get_root_node(),
