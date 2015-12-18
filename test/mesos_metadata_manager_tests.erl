@@ -17,7 +17,8 @@ md_test_() ->
      TeardownFun,
      [
       fun create_delete/0,
-      fun create_with_data/0
+      fun create_with_data/0,
+      fun set_get/0
      ]}.
 
 create_delete() ->
@@ -39,6 +40,20 @@ create_with_data() ->
                  mesos_metadata_manager:make_child_with_data(RootName, "child", Data)),
     ?assertEqual({ok, ChildName, Data},
                  mesos_metadata_manager:get_node(ChildName)),
+
+    pass.
+
+set_get() ->
+    {RootName, ChildName} = reset_test_metadata("child"),
+
+    Data1 = <<"first">>,
+    Data2 = <<"second">>,
+
+    ?assertEqual({ok, ChildName, Data1},
+                 mesos_metadata_manager:make_child_with_data(RootName, "child", Data1)),
+
+    ?assertEqual(ok, mesos_metadata_manager:set_data(ChildName, Data2)),
+    ?assertEqual({ok, ChildName, Data2}, mesos_metadata_manager:get_node(ChildName)),
 
     pass.
 
