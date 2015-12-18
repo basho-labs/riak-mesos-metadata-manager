@@ -23,6 +23,7 @@ create_delete() ->
     {ok, RootName, _Data = <<>>} = mesos_metadata_manager:get_root_node(),
     ChildName = RootName ++ "/child",
 
+    %% Make sure there's nothing left over from previous tests
     mesos_metadata_manager:recursive_delete(ChildName),
     ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(ChildName)),
 
