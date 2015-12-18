@@ -30,24 +30,31 @@
 start_link(ZooKeeperServers, FrameworkID) ->
     gen_server:start_link({local,?MODULE}, ?MODULE, [ZooKeeperServers, FrameworkID], []).
 
+-spec stop() -> ok.
 stop() ->
     gen_server:call(?MODULE, stop).
 
+-spec get_root_node() -> {ok, string(), binary()}.
 get_root_node() ->
     gen_server:call(?MODULE, get_root_node).
 
+-spec get_node(iodata()) -> {ok, string(), binary()} | {error, atom()}.
 get_node(Node) ->
     gen_server:call(?MODULE, {get_node, Node}).
 
+-spec make_child(iodata(), iodata()) -> {ok, string(), binary()} | {error, atom()}.
 make_child(Parent, Child) ->
     make_child(Parent, Child, true).
 
+-spec make_child(iodata(), iodata(), boolean()) -> {ok, string(), binary()} | {error, atom()}.
 make_child(Parent, Child, Ephemeral) ->
     gen_server:call(?MODULE, {make_child, Parent, Child, Ephemeral}).
 
+-spec delete_children(iodata()) -> ok | {error, atom()}.
 delete_children(Parent) ->
     gen_server:call(?MODULE, {delete_children, Parent}).
 
+-spec recursive_delete(iodata()) -> ok | {error, atom()}.
 recursive_delete(Node) ->
     gen_server:call(?MODULE, {recursive_delete, Node}).
 
@@ -57,7 +64,7 @@ init([ZooKeeperServers, FrameworkID]) ->
     Namespace = string:join([?BASE_NS, FrameworkID], "/"),
 
     {ok, Conn} = erlzk:connect(ZooKeeperServers, 30000),
-    erlzk:create(Conn, "/"), %% Just in case it doesn't already exist
+    _ = erlzk:create(Conn, "/"), %% Just in case it doesn't already exist
     guarantee_created(Conn, Namespace),
 
     {ok, #state{
@@ -105,7 +112,7 @@ create(Conn, Node, Ephemeral) ->
                      true -> ephemeral;
                      false -> persistent
                  end,
-    case erlzk:create(Conn, Node) of
+    case erlzk:create(Conn, Node, CreateMode) of
         {ok, _} ->
             {ok, Node, <<>>};
         Error ->
@@ -114,11 +121,12 @@ create(Conn, Node, Ephemeral) ->
 
 guarantee_created(Conn, Node) ->
     Components = string:tokens(Node, "/"),
-    lists:foldl(fun(C, Acc) ->
-                        NewNode = Acc ++ C,
-                        erlzk:create(Conn, NewNode),
-                        NewNode ++ "/"
-                end, "/", Components).
+    _ = lists:foldl(fun(C, Acc) ->
+                            NewNode = Acc ++ C,
+                            _ = erlzk:create(Conn, NewNode),
+                            NewNode ++ "/"
+                    end, "/", Components),
+    ok.
 
 get_node(Conn, Node) ->
     case erlzk:get_data(Conn, Node) of
@@ -140,8 +148,8 @@ delete_children(Conn, Parent) ->
 recursive_delete(Conn, Node) ->
     case erlzk:get_children(Conn, Node) of
         {ok, Children} ->
-            [recursive_delete(Conn, [Node, "/", C]) || C <- Children],
-            erlzk:delete(Conn, Node);
+            _ = [recursive_delete(Conn, [Node, "/", C]) || C <- Children],
+            ok = erlzk:delete(Conn, Node);
         {error, no_node} ->
             ok
     end.

@@ -24,7 +24,7 @@ create_delete() ->
     ChildName = RootName ++ "/child",
 
     %% Make sure there's nothing left over from previous tests
-    mesos_metadata_manager:recursive_delete(ChildName),
+    ?assertEqual(ok, mesos_metadata_manager:recursive_delete(ChildName)),
     ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(ChildName)),
 
     create_helper(RootName, ChildName, false),
@@ -37,7 +37,7 @@ create_delete() ->
 
 create_helper(RootName, ChildName, Ephemeral) ->
     ?assertEqual({ok, ChildName, _Data = <<>>},
-                 mesos_metadata_manager:make_child(RootName, "child", false)),
+                 mesos_metadata_manager:make_child(RootName, "child", Ephemeral)),
     ?assertEqual({ok, ChildName, <<>>}, mesos_metadata_manager:get_node(ChildName)).
 
 delete_helper(RootName, ChildName) ->
