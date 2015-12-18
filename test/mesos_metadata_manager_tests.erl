@@ -16,16 +16,12 @@ md_test_() ->
      SetupFun,
      TeardownFun,
      [
-      fun create_delete/0
+      fun create_delete/0,
+      fun create_with_data/0
      ]}.
 
 create_delete() ->
-    {ok, RootName, _Data = <<>>} = mesos_metadata_manager:get_root_node(),
-    ChildName = RootName ++ "/child",
-
-    %% Make sure there's nothing left over from previous tests
-    ?assertEqual(ok, mesos_metadata_manager:recursive_delete(ChildName)),
-    ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(ChildName)),
+    {RootName, ChildName} = reset_test_metadata("child"),
 
     create_helper(RootName, ChildName, false),
     delete_helper(RootName, ChildName),
@@ -34,6 +30,26 @@ create_delete() ->
     delete_helper(RootName, ChildName),
 
     pass.
+
+create_with_data() ->
+    {RootName, ChildName} = reset_test_metadata("child"),
+    Data = <<"riak-testing-123">>,
+
+    ?assertEqual({ok, ChildName, Data},
+                 mesos_metadata_manager:make_child_with_data(RootName, "child", Data)),
+    ?assertEqual({ok, ChildName, Data},
+                 mesos_metadata_manager:get_node(ChildName)),
+
+    pass.
+
+reset_test_metadata(Child) ->
+    {ok, RootName, _Data = <<>>} = mesos_metadata_manager:get_root_node(),
+
+    ChildName = RootName ++ "/" ++ Child,
+    ?assertEqual(ok, mesos_metadata_manager:recursive_delete(ChildName)),
+    ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(ChildName)),
+
+    {RootName, ChildName}.
 
 create_helper(RootName, ChildName, Ephemeral) ->
     ?assertEqual({ok, ChildName, _Data = <<>>},
