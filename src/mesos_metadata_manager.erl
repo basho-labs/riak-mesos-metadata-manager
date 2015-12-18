@@ -13,6 +13,7 @@
          make_child/3,
          make_child_with_data/3,
          make_child_with_data/4,
+         set_data/2,
          delete_children/1,
          recursive_delete/1
         ]).
@@ -62,6 +63,10 @@ make_child_with_data(Parent, Child, Data) when is_binary(Data) ->
 make_child_with_data(Parent, Child, Data, Ephemeral) ->
     gen_server:call(?MODULE, {make_child, Parent, Child, Data, Ephemeral}).
 
+-spec set_data(iodata(), binary()) -> ok | {error, atom()}.
+set_data(Node, Data) ->
+    gen_server:call(?MODULE, {set_data, Node, Data}).
+
 -spec delete_children(iodata()) -> ok | {error, atom()}.
 delete_children(Parent) ->
     gen_server:call(?MODULE, {delete_children, Parent}).
@@ -94,6 +99,9 @@ handle_call({make_child, Parent, Child, Data, Ephemeral}, _From, State) ->
     Conn = State#state.conn,
     Node = string:join([Parent, Child], "/"),
     {reply, create(Conn, Node, Data, Ephemeral), State};
+handle_call({set_data, Node, Data}, _From, State) ->
+    Conn = State#state.conn,
+    {reply, set_data(Conn, Node, Data), State};
 handle_call({delete_children, Parent}, _From, State) ->
     Conn = State#state.conn,
     {reply, delete_children(Conn, Parent), State};
@@ -144,6 +152,14 @@ get_node(Conn, Node) ->
     case erlzk:get_data(Conn, Node) of
         {ok, {Data, _Stat}} ->
             {ok, Node, Data};
+        Error ->
+            Error
+    end.
+
+set_data(Conn, Node, Data) ->
+    case erlzk:set_data(Conn, Node, Data) of
+        {ok, _Stat} ->
+            ok;
         Error ->
             Error
     end.
