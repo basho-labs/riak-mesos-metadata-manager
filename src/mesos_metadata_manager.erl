@@ -9,6 +9,7 @@
          stop/0,
          get_root_node/0,
          get_node/1,
+         get_children/1,
          make_child/2,
          make_child/3,
          make_child_with_data/3,
@@ -44,6 +45,10 @@ get_root_node() ->
 -spec get_node(iodata()) -> {ok, string(), binary()} | {error, atom()}.
 get_node(Node) ->
     gen_server:call(?MODULE, {get_node, Node}).
+
+-spec get_children(iodata()) -> {ok, [string()]} | {error, atom()}.
+get_children(Node) ->
+    gen_server:call(?MODULE, {get_children, Node}).
 
 -spec make_child(iodata(), iodata()) -> {ok, string(), binary()} | {error, atom()}.
 make_child(Parent, Child) ->
@@ -95,6 +100,9 @@ handle_call(get_root_node, _From, State) ->
 handle_call({get_node, Node}, _From, State) ->
     Conn = State#state.conn,
     {reply, get_node(Conn, Node), State};
+handle_call({get_children, Node}, _From, State) ->
+    Conn = State#state.conn,
+    {reply, get_children(Conn, Node), State};
 handle_call({make_child, Parent, Child, Data, Ephemeral}, _From, State) ->
     Conn = State#state.conn,
     Node = string:join([Parent, Child], "/"),
@@ -155,6 +163,9 @@ get_node(Conn, Node) ->
         Error ->
             Error
     end.
+
+get_children(Conn, Node) ->
+    erlzk:get_children(Conn, Node).
 
 set_data(Conn, Node, Data) ->
     case erlzk:set_data(Conn, Node, Data) of
