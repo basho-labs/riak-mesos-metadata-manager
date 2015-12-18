@@ -10,6 +10,7 @@
          get_root_node/0,
          get_node/1,
          make_child/2,
+         make_child/3,
          delete_children/1,
          recursive_delete/1
         ]).
@@ -39,7 +40,10 @@ get_node(Node) ->
     gen_server:call(?MODULE, {get_node, Node}).
 
 make_child(Parent, Child) ->
-    gen_server:call(?MODULE, {make_child, Parent, Child}).
+    make_child(Parent, Child, true).
+
+make_child(Parent, Child, Ephemeral) ->
+    gen_server:call(?MODULE, {make_child, Parent, Child, Ephemeral}).
 
 delete_children(Parent) ->
     gen_server:call(?MODULE, {delete_children, Parent}).
@@ -67,10 +71,10 @@ handle_call(get_root_node, _From, State) ->
 handle_call({get_node, Node}, _From, State) ->
     Conn = State#state.conn,
     {reply, get_node(Conn, Node), State};
-handle_call({make_child, Parent, Child}, _From, State) ->
+handle_call({make_child, Parent, Child, Ephemeral}, _From, State) ->
     Conn = State#state.conn,
     Node = string:join([Parent, Child], "/"),
-    {reply, create(Conn, Node), State};
+    {reply, create(Conn, Node, Ephemeral), State};
 handle_call({delete_children, Parent}, _From, State) ->
     Conn = State#state.conn,
     {reply, delete_children(Conn, Parent), State};
@@ -96,7 +100,11 @@ code_change(_OldVersion, State, _Extra) ->
 
 %% Private implementation functions:
 
-create(Conn, Node) ->
+create(Conn, Node, Ephemeral) ->
+    CreateMode = case Ephemeral of
+                     true -> ephemeral;
+                     false -> persistent
+                 end,
     case erlzk:create(Conn, Node) of
         {ok, _} ->
             {ok, Node, <<>>};
