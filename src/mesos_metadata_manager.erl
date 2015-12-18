@@ -11,6 +11,8 @@
          get_node/1,
          make_child/2,
          make_child/3,
+         make_child_with_data/3,
+         make_child_with_data/4,
          delete_children/1,
          recursive_delete/1
         ]).
@@ -44,11 +46,21 @@ get_node(Node) ->
 
 -spec make_child(iodata(), iodata()) -> {ok, string(), binary()} | {error, atom()}.
 make_child(Parent, Child) ->
-    make_child(Parent, Child, true).
+    make_child_with_data(Parent, Child, <<>>).
 
 -spec make_child(iodata(), iodata(), boolean()) -> {ok, string(), binary()} | {error, atom()}.
-make_child(Parent, Child, Ephemeral) ->
-    gen_server:call(?MODULE, {make_child, Parent, Child, Ephemeral}).
+make_child(Parent, Child, Ephemeral) when is_boolean(Ephemeral) ->
+    make_child_with_data(Parent, Child, <<>>, Ephemeral).
+
+-spec make_child_with_data(string(), string(), binary()) ->
+    {ok, string(), binary()} | {error, atom()}.
+make_child_with_data(Parent, Child, Data) when is_binary(Data) ->
+    make_child_with_data(Parent, Child, Data, true).
+
+-spec make_child_with_data(string(), string(), binary(), boolean()) ->
+    {ok, string(), binary()} | {error, atom()}.
+make_child_with_data(Parent, Child, Data, Ephemeral) ->
+    gen_server:call(?MODULE, {make_child, Parent, Child, Data, Ephemeral}).
 
 -spec delete_children(iodata()) -> ok | {error, atom()}.
 delete_children(Parent) ->
@@ -78,10 +90,10 @@ handle_call(get_root_node, _From, State) ->
 handle_call({get_node, Node}, _From, State) ->
     Conn = State#state.conn,
     {reply, get_node(Conn, Node), State};
-handle_call({make_child, Parent, Child, Ephemeral}, _From, State) ->
+handle_call({make_child, Parent, Child, Data, Ephemeral}, _From, State) ->
     Conn = State#state.conn,
     Node = string:join([Parent, Child], "/"),
-    {reply, create(Conn, Node, Ephemeral), State};
+    {reply, create(Conn, Node, Data, Ephemeral), State};
 handle_call({delete_children, Parent}, _From, State) ->
     Conn = State#state.conn,
     {reply, delete_children(Conn, Parent), State};
@@ -107,14 +119,14 @@ code_change(_OldVersion, State, _Extra) ->
 
 %% Private implementation functions:
 
-create(Conn, Node, Ephemeral) ->
+create(Conn, Node, Data, Ephemeral) ->
     CreateMode = case Ephemeral of
                      true -> ephemeral;
                      false -> persistent
                  end,
-    case erlzk:create(Conn, Node, CreateMode) of
-        {ok, _} ->
-            {ok, Node, <<>>};
+    case erlzk:create(Conn, Node, Data, CreateMode) of
+        {ok, Path} ->
+            {ok, Path, Data};
         Error ->
             Error
     end.
