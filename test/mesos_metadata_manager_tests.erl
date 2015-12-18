@@ -28,7 +28,7 @@ create_delete() ->
     ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(ChildName)),
 
     ?assertEqual({ok, ChildName, _Data = <<>>},
-                 mesos_metadata_manager:make_empty_child(RootName, "child")),
+                 mesos_metadata_manager:make_child(RootName, "child")),
     ?assertEqual({ok, ChildName, <<>>}, mesos_metadata_manager:get_node(ChildName)),
 
     ok = mesos_metadata_manager:delete_children(RootName),

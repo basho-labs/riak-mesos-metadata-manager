@@ -9,7 +9,7 @@
          stop/0,
          get_root_node/0,
          get_node/1,
-         make_empty_child/2,
+         make_child/2,
          delete_children/1,
          recursive_delete/1
         ]).
@@ -38,8 +38,8 @@ get_root_node() ->
 get_node(Node) ->
     gen_server:call(?MODULE, {get_node, Node}).
 
-make_empty_child(Parent, Child) ->
-    gen_server:call(?MODULE, {make_empty_child, Parent, Child}).
+make_child(Parent, Child) ->
+    gen_server:call(?MODULE, {make_child, Parent, Child}).
 
 delete_children(Parent) ->
     gen_server:call(?MODULE, {delete_children, Parent}).
@@ -67,7 +67,7 @@ handle_call(get_root_node, _From, State) ->
 handle_call({get_node, Node}, _From, State) ->
     Conn = State#state.conn,
     {reply, get_node(Conn, Node), State};
-handle_call({make_empty_child, Parent, Child}, _From, State) ->
+handle_call({make_child, Parent, Child}, _From, State) ->
     Conn = State#state.conn,
     Node = string:join([Parent, Child], "/"),
     {reply, create(Conn, Node), State};
