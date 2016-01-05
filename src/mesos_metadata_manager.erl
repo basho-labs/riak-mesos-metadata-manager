@@ -15,6 +15,7 @@
          make_child_with_data/3,
          make_child_with_data/4,
          set_data/2,
+         create_or_set/3,
          delete_children/1,
          recursive_delete/1
         ]).
@@ -72,6 +73,10 @@ make_child_with_data(Parent, Child, Data, Ephemeral) ->
 set_data(Node, Data) ->
     gen_server:call(?MODULE, {set_data, Node, Data}).
 
+-spec create_or_set(iodata(), iodata(), binary()) -> {ok, iodata(), binary()} | {error, atom()}.
+create_or_set(Parent, Child, Data) ->
+    gen_server:call(?MODULE, {create_or_set, Parent, Child, Data}).
+
 -spec delete_children(iodata()) -> ok | {error, atom()}.
 delete_children(Parent) ->
     gen_server:call(?MODULE, {delete_children, Parent}).
@@ -110,6 +115,9 @@ handle_call({make_child, Parent, Child, Data, Ephemeral}, _From, State) ->
 handle_call({set_data, Node, Data}, _From, State) ->
     Conn = State#state.conn,
     {reply, set_data(Conn, Node, Data), State};
+handle_call({create_or_set, Parent, Child, Data}, _From, State) ->
+    Conn = State#state.conn,
+    {reply, create_or_set(Conn, Parent, Child, Data), State};
 handle_call({delete_children, Parent}, _From, State) ->
     Conn = State#state.conn,
     {reply, delete_children(Conn, Parent), State};
@@ -173,6 +181,20 @@ set_data(Conn, Node, Data) ->
             ok;
         Error ->
             Error
+    end.
+
+create_or_set(Conn, Parent, Child, Data) ->
+    Node = [Parent, "/", Child],
+    case create(Conn, Node, Data, false) of
+        {error, node_exists} ->
+            case set_data(Conn, Node, Data) of
+                ok ->
+                    {ok, Node, Data};
+                SetResult ->
+                    SetResult
+            end;
+        CreateResult ->
+            CreateResult
     end.
 
 delete_children(Conn, Parent) ->
