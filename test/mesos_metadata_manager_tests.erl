@@ -19,7 +19,8 @@ md_test_() ->
       fun create_delete/0,
       fun create_with_data/0,
       fun set_get/0,
-      fun get_children/0
+      fun get_children/0,
+      fun create_or_set/0
      ]}.
 
 create_delete() ->
@@ -64,11 +65,25 @@ get_children() ->
 
     %% If we check the children of the root node, we may see results from other tests,
     %% so make everything a child of the base "child" node.
-    {ok, SubChild1, <<>>} = mesos_metadata_manager:make_child(ChildName, "subchild1"),
-    {ok, SubChild2, <<>>} = mesos_metadata_manager:make_child(ChildName, "subchild2"),
+    {ok, _SubChild1, <<>>} = mesos_metadata_manager:make_child(ChildName, "subchild1"),
+    {ok, _SubChild2, <<>>} = mesos_metadata_manager:make_child(ChildName, "subchild2"),
 
     {ok, Result} = mesos_metadata_manager:get_children(ChildName),
     ?assertEqual(["subchild1", "subchild2"], lists:sort(Result)),
+
+    pass.
+
+create_or_set() ->
+    {RootName, ChildName} = reset_test_metadata("child"),
+    CreateData = <<"test-create">>,
+    UpdateData = <<"test-update">>,
+
+    {ok, ChildName, CreateData} = mesos_metadata_manager:create_or_set(
+                                    RootName, "child", CreateData),
+    {ok, _, CreateData} = mesos_metadata_manager:get_node(ChildName),
+
+    {ok, _, UpdateData} = mesos_metadata_manager:create_or_set(RootName, "child", UpdateData),
+    {ok, _, UpdateData} = mesos_metadata_manager:get_node(ChildName),
 
     pass.
 
