@@ -62,7 +62,7 @@ make_child(Parent, Child, Ephemeral) when is_boolean(Ephemeral) ->
 -spec make_child_with_data(string(), string(), binary()) ->
     {ok, string(), binary()} | {error, atom()}.
 make_child_with_data(Parent, Child, Data) when is_binary(Data) ->
-    make_child_with_data(Parent, Child, Data, true).
+    make_child_with_data(Parent, Child, Data, false).
 
 -spec make_child_with_data(string(), string(), binary(), boolean()) ->
     {ok, string(), binary()} | {error, atom()}.
