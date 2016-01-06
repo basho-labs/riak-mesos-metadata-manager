@@ -16,6 +16,7 @@
          make_child_with_data/4,
          set_data/2,
          create_or_set/3,
+         delete_node/1,
          delete_children/1,
          recursive_delete/1
         ]).
@@ -77,6 +78,10 @@ set_data(Node, Data) ->
 create_or_set(Parent, Child, Data) ->
     gen_server:call(?MODULE, {create_or_set, Parent, Child, Data}).
 
+-spec delete_node(iodata()) -> ok | {error, atom()}.
+delete_node(Node) ->
+    gen_server:call(?MODULE, {delete_node, Node}).
+
 -spec delete_children(iodata()) -> ok | {error, atom()}.
 delete_children(Parent) ->
     gen_server:call(?MODULE, {delete_children, Parent}).
@@ -118,6 +123,9 @@ handle_call({set_data, Node, Data}, _From, State) ->
 handle_call({create_or_set, Parent, Child, Data}, _From, State) ->
     Conn = State#state.conn,
     {reply, create_or_set(Conn, Parent, Child, Data), State};
+handle_call({delete_node, Node}, _From, State) ->
+    Conn = State#state.conn,
+    {reply, erlzk:delete(Conn, Node), State};
 handle_call({delete_children, Parent}, _From, State) ->
     Conn = State#state.conn,
     {reply, delete_children(Conn, Parent), State};

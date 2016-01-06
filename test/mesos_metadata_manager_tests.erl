@@ -32,6 +32,10 @@ create_delete() ->
     create_helper(RootName, ChildName, true),
     delete_helper(RootName, ChildName),
 
+    create_helper(RootName, ChildName, false),
+    ?assertEqual(ok, mesos_metadata_manager:delete_node(ChildName)),
+    ?assertEqual({error, no_node}, mesos_metadata_manager:get_node(ChildName)),
+
     pass.
 
 create_with_data() ->
