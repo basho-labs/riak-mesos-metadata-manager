@@ -1,5 +1,7 @@
 -module(mesos_metadata_manager_tests).
 
+-compile(export_all).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(TEST_ZK_SERVER, [{"localhost", 2181}]).
@@ -20,7 +22,8 @@ md_test_() ->
       fun create_with_data/0,
       fun set_get/0,
       fun get_children/0,
-      fun create_or_set/0
+      fun create_or_set/0,
+      fun discconnect_errors/0
      ]}.
 
 create_delete() ->
@@ -90,6 +93,47 @@ create_or_set() ->
     {ok, _, UpdateData} = mesos_metadata_manager:get_node(ChildName),
 
     pass.
+
+%% This test makes sure that errors due to disconnects are appropriately returned,
+%% and don't trigger any crashes or unexpected return values.
+discconnect_errors() ->
+    {ok, RootName, _Data = <<>>} = mesos_metadata_manager:get_root_node(),
+
+    fake_erlzk_disconnect(),
+
+    {error, closed} = mesos_metadata_manager:get_root_node(),
+    {error, closed} = mesos_metadata_manager:get_node(RootName),
+    {error, closed} = mesos_metadata_manager:get_children(RootName),
+    {error, closed} = mesos_metadata_manager:make_child(RootName, "child"),
+    {error, closed} = mesos_metadata_manager:make_child_with_data(RootName, "child", <<>>),
+    {error, closed} = mesos_metadata_manager:set_data(RootName, <<>>),
+    {error, closed} = mesos_metadata_manager:create_or_set(RootName, "child", <<>>),
+    {error, closed} = mesos_metadata_manager:delete_node(RootName),
+    {error, closed} = mesos_metadata_manager:delete_children(RootName),
+    {error, closed} = mesos_metadata_manager:recursive_delete(RootName),
+
+    meck:unload(erlzk),
+    pass.
+
+%% Basically every erlzk call will return {error, closed} if we attempt to call it
+%% while the connection to zookeeper is down. This uses meck to simulate this in a
+%% slightly ham-fisted fashion.
+fake_erlzk_disconnect() ->
+    application:ensure_all_started(meck),
+
+    ErlZkAPI = erlzk:module_info(exports),
+
+    meck:new(erlzk),
+    [meck:expect(erlzk, FName, make_error_fun(Arity)) || {FName, Arity} <- ErlZkAPI,
+                                                         FName =/= module_info].
+
+make_error_fun(Arity) ->
+    ArgStr = string:join(lists:duplicate(Arity, "_"), ", "),
+    FunStr = "fun(" ++ ArgStr ++ ") -> {error, closed} end.",
+    {ok, Tokens, _} = erl_scan:string(FunStr),
+    {ok, [Form]} = erl_parse:parse_exprs(Tokens),
+    {value, Fun, _} = erl_eval:expr(Form, []),
+    Fun.
 
 reset_test_metadata(Child) ->
     {ok, RootName, _Data = <<>>} = mesos_metadata_manager:get_root_node(),
