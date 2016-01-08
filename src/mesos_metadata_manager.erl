@@ -40,7 +40,7 @@ start_link(ZooKeeperServers, FrameworkID) ->
 stop() ->
     gen_server:call(?MODULE, stop).
 
--spec get_root_node() -> {ok, string(), binary()}.
+-spec get_root_node() -> {ok, string(), binary()} | {error, atom()}.
 get_root_node() ->
     gen_server:call(?MODULE, get_root_node).
 
@@ -220,5 +220,7 @@ recursive_delete(Conn, Node) ->
             _ = [recursive_delete(Conn, [Node, "/", C]) || C <- Children],
             ok = erlzk:delete(Conn, Node);
         {error, no_node} ->
-            ok
+            ok;
+        OtherError ->
+            OtherError
     end.
