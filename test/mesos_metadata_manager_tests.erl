@@ -8,11 +8,14 @@
 
 md_test_() ->
     SetupFun = fun() ->
+                       zookeeper_setup(),
                        application:ensure_all_started(erlzk),
                        (catch mesos_metadata_manager:stop()),
                        {ok, _Pid} = mesos_metadata_manager:start_link(?TEST_ZK_SERVER,"md-mgr-test")
                end,
-    TeardownFun = fun(_) -> ok end,
+    TeardownFun = fun(_) ->
+                       zookeeper_teardown()
+               end,
 
     {setup,
      SetupFun,
@@ -25,6 +28,14 @@ md_test_() ->
       fun create_or_set/0,
       fun discconnect_errors/0
      ]}.
+
+zookeeper_setup() ->
+    _StdOut = os:cmd("../zk/bin/zkServer.sh start"),
+    pass.
+
+zookeeper_teardown() ->
+    _StdOut = os:cmd("kill `cat /tmp/zookeeper/zookeeper_server.pid`"),
+    pass.
 
 create_delete() ->
     {RootName, ChildName} = reset_test_metadata("child"),
