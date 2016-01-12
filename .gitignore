@@ -1,4 +1,6 @@
 .eunit
 .local_dialyzer_plt
+.rebar/
 deps
 ebin
+zk/

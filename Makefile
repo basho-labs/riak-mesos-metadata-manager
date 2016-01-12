@@ -1,4 +1,9 @@
 .PHONY: all clean deps compile test distclean
+SRC_PATH ?= ..
+ZK_PATH ?= $(SRC_PATH)/mesos/build/3rdparty/zookeeper-3.4.5
+ZK_BIN_PATH ?= $(ZK_PATH)/bin
+ZK_CONF_PATH ?= $(ZK_PATH)/conf
+ZK_VERSION ?= 3.4.5
 
 all: deps compile
 
@@ -14,6 +19,20 @@ deps:
 
 compile:
 	$(REBAR) skip_deps=true compile
+
+test: test_setup
+
+test_setup:
+	if [ ! -d zk/bin ]; then \
+		mkdir -p zk/bin && \
+		mkdir -p zk/lib && \
+		mkdir -p zk/conf && \
+		cp $(ZK_BIN_PATH)/* zk/bin/ && \
+		cp $(ZK_CONF_PATH)/* zk/conf && \
+		cp $(ZK_PATH)/zookeeper-$(ZK_VERSION).jar zk/ && \
+		cp -r $(ZK_PATH)/lib zk/ && \
+		mv zk/conf/zoo_sample.cfg zk/conf/zoo.cfg; \
+	fi
 
 DIALYZER_APPS = erts kernel stdlib sasl eunit compiler crypto public_key
 
