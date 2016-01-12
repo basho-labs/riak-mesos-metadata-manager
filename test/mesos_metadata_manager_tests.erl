@@ -30,12 +30,10 @@ md_test_() ->
      ]}.
 
 zookeeper_setup() ->
-    _StdOut = os:cmd("../zk/bin/zkServer.sh start"),
-    pass.
+    _StdOut = os:cmd("../zk/bin/zkServer.sh start").
 
 zookeeper_teardown() ->
-    _StdOut = os:cmd("kill `cat /tmp/zookeeper/zookeeper_server.pid`"),
-    pass.
+    _StdOut = os:cmd("../zk/bin/zkServer.sh stop").
 
 create_delete() ->
     {RootName, ChildName} = reset_test_metadata("child"),
