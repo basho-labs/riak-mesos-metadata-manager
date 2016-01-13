@@ -7,8 +7,8 @@ os:
   - linux
 # - osx #<< does not support erlang
 otp_release:
-  - 18.1
-  - 17.5
+  # - 18.1
+  # - 17.5
   - R16B03
-  - R16B02
+  # - R16B02
 script: make test

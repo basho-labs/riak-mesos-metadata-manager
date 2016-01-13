@@ -30,10 +30,7 @@ md_test_() ->
      ]}.
 
 zookeeper_setup() ->
-    StdOut = os:cmd("../zk/bin/zkServer.sh start"),
-    ?debugFmt("PWD: ~p~n", [os:cmd("echo $PWD")]),
-    ?debugFmt("zkServer start:~n~p~n", [StdOut]),
-    ?debugFmt("cat $ZOO_LOG_DIR/zookeeper.out:~n~p~n", [os:cmd(". ../zk/bin/zkEnv.sh && cat $ZOO_LOG_DIR/zookeeper.out")]).
+    _StdOut = os:cmd("../zk/bin/zkServer.sh start").
 
 zookeeper_teardown() ->
     _StdOut = os:cmd("../zk/bin/zkServer.sh stop").
