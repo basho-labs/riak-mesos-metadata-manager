@@ -42,7 +42,8 @@ test_setup:
 	if [ ! -e zk/conf/zoo.cfg ]; then \
 		mv zk/conf/zoo_sample.cfg zk/conf/zoo.cfg ; \
 	fi
-	zk/bin/zkServer.sh start
+	zk/bin/zkServer.sh start-foreground
+	cat zookeeper.out
 
 DIALYZER_APPS = erts kernel stdlib sasl eunit compiler crypto public_key
 
