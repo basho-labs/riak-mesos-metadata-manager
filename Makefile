@@ -21,6 +21,7 @@ compile:
 	$(REBAR) skip_deps=true compile
 
 test: test_setup
+	zk/bin/zkServer.sh stop
 
 test_setup:
 	if [ ! -d $(ZK_BIN_PATH) ] && [ ! -d zk/bin ]; then \
@@ -41,6 +42,7 @@ test_setup:
 	if [ ! -e zk/conf/zoo.cfg ]; then \
 		mv zk/conf/zoo_sample.cfg zk/conf/zoo.cfg ; \
 	fi
+	zk/bin/zkServer.sh start
 
 DIALYZER_APPS = erts kernel stdlib sasl eunit compiler crypto public_key
 
