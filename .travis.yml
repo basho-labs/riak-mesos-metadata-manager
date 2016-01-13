@@ -1,0 +1,13 @@
+language: erlang
+# notifications:
+#   webhooks: http://basho-engbot.herokuapp.com/travis?key= ??? #<< what to put for key?
+#   email: eng@basho.com
+# list of otp_releases matching riak-erlang-client
+os:
+  - linux
+# - osx #<< does not support erlang
+otp_release:
+  - 18.1
+  - 17.5
+  - R16B03
+  - R16B02
