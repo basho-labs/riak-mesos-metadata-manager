@@ -17,8 +17,7 @@ deps:
 	$(REBAR) get-deps
 	$(REBAR) compile
 
-compile:
-	$(REBAR) skip_deps=true compile
+compile: deps
 
 test: test_setup
 

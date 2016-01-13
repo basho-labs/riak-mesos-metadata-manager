@@ -95,12 +95,7 @@ recursive_delete(Node) ->
 init([ZooKeeperServers, FrameworkID]) ->
     Namespace = string:join([?BASE_NS, FrameworkID], "/"),
 
-    Conn = case erlzk:connect(ZooKeeperServers, 30000) of
-        {ok, Conn0} -> Conn0;
-        NotOk ->
-            io:format("Error creating ZK connection:~n~p~n", [NotOk]),
-            NotOk
-    end,
+    {ok, Conn} = erlzk:connect(ZooKeeperServers, 30000),
     _ = erlzk:create(Conn, "/"), %% Just in case it doesn't already exist
     guarantee_created(Conn, Namespace),
 
