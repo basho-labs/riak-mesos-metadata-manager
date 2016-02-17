@@ -5,7 +5,8 @@
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  erlzk
                  ]},
   {mod, { riak_mesos_md_mgr_app, []}},
   {env, []}
