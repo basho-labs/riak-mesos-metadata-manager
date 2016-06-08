@@ -101,7 +101,7 @@ recursive_delete(Node) ->
 init([ZooKeeperServers, FrameworkID, Options]) ->
     Base = proplists:get_value(base, Options, "/riak/frameworks"),
     Timeout = proplists:get_value(timeout, Options, 30000),
-    AuthData = proplists:get_value(auth_data, Options),
+    AuthData = proplists:get_value(auth_data, Options, []),
     Namespace = string:join([Base, FrameworkID], "/"),
     {ok, Conn} = erlzk:connect(ZooKeeperServers, Timeout, [{auth_data, AuthData}]),
     _ = erlzk:create(Conn, "/"), %% Just in case it doesn't already exist
