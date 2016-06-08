@@ -2,10 +2,9 @@
 
 -behavior(gen_server).
 
--compile(export_all).
-
 -export([
          start_link/2,
+         start_link/3,
          stop/0,
          get_root_node/0,
          get_node/1,
@@ -23,18 +22,25 @@
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-type options() :: [{base, string()} |
+                    {timeout, pos_integer()} |
+                    {auth_data, [{Scheme::nonempty_string(), Id::binary()}]}
+                   ].
+
 -record(state, {
           conn,
           namespace
          }).
 
--define(BASE_NS, "/riak/frameworks").
-
 %% public API
 
 -spec start_link([{string(), integer()}], string()) -> {ok, pid()}.
 start_link(ZooKeeperServers, FrameworkID) ->
-    gen_server:start_link({local,?MODULE}, ?MODULE, [ZooKeeperServers, FrameworkID], []).
+    start_link(ZooKeeperServers, FrameworkID, []).
+
+-spec start_link([{string(), integer()}], string(), options()) -> {ok, pid()}.
+start_link(ZooKeeperServers, FrameworkID, Options) ->
+    gen_server:start_link({local,?MODULE}, ?MODULE, [ZooKeeperServers, FrameworkID, Options], []).
 
 -spec stop() -> ok.
 stop() ->
@@ -92,10 +98,12 @@ recursive_delete(Node) ->
 
 %% gen_server implementation
 
-init([ZooKeeperServers, FrameworkID]) ->
-    Namespace = string:join([?BASE_NS, FrameworkID], "/"),
-
-    {ok, Conn} = erlzk:connect(ZooKeeperServers, 30000),
+init([ZooKeeperServers, FrameworkID, Options]) ->
+    Base = proplists:get_value(base, Options, "/riak/frameworks"),
+    Timeout = proplists:get_value(timeout, Options, 30000),
+    AuthData = proplists:get_value(auth_data, Options),
+    Namespace = string:join([Base, FrameworkID], "/"),
+    {ok, Conn} = erlzk:connect(ZooKeeperServers, Timeout, [{auth_data, AuthData}]),
     _ = erlzk:create(Conn, "/"), %% Just in case it doesn't already exist
     guarantee_created(Conn, Namespace),
 
